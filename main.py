@@ -6,14 +6,7 @@ import schema
 import crud
 from models import Product, CartItem, Cart
 
-# Initialize the FastAPI application
 app = FastAPI()
-
-# # Create database tables asynchronously
-# @app.on_event("startup")
-# async def init_db():
-#     async with engine.begin() as conn:
-#         await conn.run_sync(Base.metadata.create_all)
 
 # Products Router
 products_router = APIRouter(prefix="/products", tags=["Products"])
@@ -62,13 +55,13 @@ async def add_product_to_cart(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-@cart_router.get("/{cart_id}/items")
+@cart_router.get("/items/{cart_id}")
 async def get_cart_items(cart_id: int, db: AsyncSession = Depends(get_db)):
     return await crud.get_cart_items(db=db, cart_id=cart_id)
 
-@cart_router.delete("/remove/{cart_item_id}")
-async def remove_item_from_cart(cart_item_id: int, db: AsyncSession = Depends(get_db)):
-    cart_item = await crud.remove_item_from_cart(db=db, cart_item_id=cart_item_id)
+@cart_router.delete("/remove/{cart_item_id}/{cart_id}")
+async def remove_item_from_cart(cart_item_id: int,cart_id:int, db: AsyncSession = Depends(get_db)):
+    cart_item = await crud.remove_item_from_cart(db=db, cart_item_id=cart_item_id,cart_id=cart_id)
     if not cart_item:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Cart item not found"
@@ -88,11 +81,10 @@ async def update_cart_item(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-# Register routers
 app.include_router(products_router)
 app.include_router(cart_router)
 
-# Run the application
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)

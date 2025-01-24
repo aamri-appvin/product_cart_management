@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from models import *
@@ -7,14 +8,11 @@ import models
 # Product Operations
 async def get_product(db: AsyncSession, product_id: int):
     query = await db.execute(select(Product).filter(Product.product_id == product_id))
-    print(query)
     return query.scalars().first()
-
 
 async def get_all_products(db: AsyncSession):
     query = await db.execute(select(Product))
     return query.scalars().all()
-
 
 async def create_product(db: AsyncSession, product: Create_Product):
     product_entry = Product(
@@ -55,23 +53,47 @@ async def delete_product(db: AsyncSession, product_id: int):
 
 
 # Cart Operations
-async def add_product_to_cart(db: AsyncSession, cart_id: int, product_id: int, quantity: int):
-    query = await db.execute(select(Product).filter(Product.product_id == product_id))
-    product_entry = query.scalars().first()
-    if not product_entry:
-        raise ValueError("Product not found")
+async def add_product_to_cart(
+    cart_id: int, product_id: int, quantity: int, db: AsyncSession
+):
+    try:
+        product_query = await db.execute(
+            select(Product).filter(Product.product_id == product_id)
+        )
+        product_entry = product_query.scalars().first()
 
-    if product_entry.quantity_in_stock < quantity:
-        raise ValueError("Insufficient stock for this product")
+        if not product_entry:
+            raise HTTPException(
+                status_code=404, detail=f"Product with ID {product_id} not found."
+            )
 
-    product_entry.quantity_in_stock -= quantity
-    db_cart_item = CartItem(cart_id=cart_id, product_id=product_id, qty=quantity)
+        if product_entry.quantity_in_stock < quantity:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Not enough stock for product ID {product_id}. Available: {product_entry.quantity_in_stock}",
+            )
+        query = await db.execute(
+            select(CartItem).filter(
+                CartItem.cart_id == cart_id, CartItem.product_id == product_id
+            )
+        )
+        existing_cart_item = query.scalars().first()
 
+        if existing_cart_item:
+            existing_cart_item.qty += quantity
+            db.add(existing_cart_item)
+        else:
+            new_cart_item = CartItem(
+                cart_id=cart_id, product_id=product_id, qty=quantity
+            )
+            db.add(new_cart_item)
+        product_entry.quantity_in_stock -= quantity
+        db.add(product_entry)  
+        await db.commit()
+        return existing_cart_item if existing_cart_item else new_cart_item
 
-    db.add_all([product_entry, db_cart_item])
-    await db.commit()
-    await db.refresh(db_cart_item)
-    return db_cart_item
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 async def create_cart(db:AsyncSession,cart:Create_Cart):
     cart_entry = models.Cart(
@@ -86,21 +108,27 @@ async def get_cart_items(db: AsyncSession, cart_id: int):
     query = await db.execute(select(CartItem).filter(CartItem.cart_id == cart_id))
     return query.scalars().all()
 
-
-async def remove_item_from_cart(db: AsyncSession, cart_item_id: int):
-    query = await db.execute(select(CartItem).filter(CartItem.cart_item_id == cart_item_id))
+async def remove_item_from_cart(db: AsyncSession, cart_item_id: int, cart_id: int):
+    query = await db.execute(
+        select(CartItem).filter(
+            CartItem.cart_id == cart_id, CartItem.cart_item_id == cart_item_id
+        )
+    )
     cart_item_entry = query.scalars().first()
     if not cart_item_entry:
         return None
-
-    product_query = await db.execute(select(Product).filter(Product.product_id == cart_item_entry.product_id))
+    product_query = await db.execute(
+        select(Product).filter(Product.product_id == cart_item_entry.product_id)
+    )
     product_entry = product_query.scalars().first()
+
     if product_entry:
         product_entry.quantity_in_stock += cart_item_entry.qty
-
+        db.add(product_entry) 
     await db.delete(cart_item_entry)
     await db.commit()
     return cart_item_entry
+
 
 
 async def update_cart_item(db: AsyncSession, cart_item_id: int, updated_item: Cart_Item_Update):
