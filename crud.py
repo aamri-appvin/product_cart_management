@@ -5,7 +5,7 @@ from models import *
 from schema import *
 from models import Product
 import models
-import Exception
+from utils import Exception
 from auth import utils
 
 #Auth Operations

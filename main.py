@@ -8,7 +8,7 @@ import products.routes
 import schema
 import crud
 from models import Product, CartItem, Cart
-import Exception
+from utils import Exception
 import auth
 import products
 import carts
