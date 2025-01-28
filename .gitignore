@@ -5,7 +5,7 @@ __pycache__/
 .history/
 # C extensions
 *.so
-.env
+.env/
 # Distribution / packaging
 .Python
 my_env/
