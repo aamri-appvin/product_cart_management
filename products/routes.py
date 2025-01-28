@@ -11,11 +11,16 @@ from auth import utils
 # Product Operations
 async def get_product(db: AsyncSession, product_id: int):
     query = await db.execute(select(Product).filter(Product.product_id == product_id))
-    query=query.scalars().first()
-    check_deleted=await db.execute(select(Deleted_Products).filter(Deleted_Products.product_id==query.product_id))
-    if check_deleted:
-        raise HTTPException(status_code=Exception.NOT_FOUND.status_code,detail=Exception.NOT_FOUND.detail)
-    return query.scalars().first()
+    product = query.scalars().first()
+    if not product:
+        raise HTTPException(status_code=Exception.NOT_FOUND.get("status_code"), detail=Exception.NOT_FOUND.get("detail"))
+    check_deleted = await db.execute(select(Deleted_Products).filter(Deleted_Products.product_id == product.product_id))
+    deleted_product = check_deleted.scalars().first()
+
+    if deleted_product:
+        raise HTTPException(status_code=Exception.NOT_FOUND.get("status_code"), detail=Exception.NOT_FOUND.get("detail"))
+    return product
+
 
 async def get_all_products(db: AsyncSession):
     result = await db.execute(
@@ -41,7 +46,7 @@ async def update_product(db: AsyncSession, product_id: int, product: Create_Prod
     
     query = await db.execute(select(Product).filter(Product.product_id == product_id,Deleted_Products.product_id !=product_id))
     if not query:
-        raise HTTPException(status_code=Exception.NOT_FOUND.status_code,detail=Exception.NOT_FOUND.detail)
+        raise HTTPException(status_code=Exception.NOT_FOUND.get("status_code"),detail=Exception.NOT_FOUND.get("detail"))
     existing_product = query.scalars().first()
     if not existing_product:
         return None
@@ -55,15 +60,15 @@ async def update_product(db: AsyncSession, product_id: int, product: Create_Prod
     return existing_product
 
 async def delete_product(db: AsyncSession, product_id: int):
-    query = await db.execute(select(Product).filter(Product.product_id == product_id))
+    query = await db.execute(select(Product).filter(Product.product_id == product_id,Deleted_Products.product_id!=product_id))
     product_entry = query.scalars().first()
-    check_deleted=await db.execute(select(Deleted_Products).filter(Deleted_Products.product_id==product_entry.product_id))
+    # check_deleted=await db.execute(select(Deleted_Products).filter(Deleted_Products.product_id==product_entry.product_id))
 
-    if check_deleted:
-        raise HTTPException(status_code=Exception.NOT_FOUND.status_code,detail="THE PRODUCT HAS ALREADY BEEN DELETED")
+    # if check_deleted:
+    #     raise HTTPException(status_code=Exception.NOT_FOUND.get("status_code"),detail=Exception.NOT_FOUND.get("detail"))
     
     if not product_entry:
-        return None
+        raise HTTPException(status_code=Exception.NOT_FOUND.get("status_code"),detail=Exception.NOT_FOUND.get("detail"))
     deleted_product=Deleted_Products(
         product_id=product_entry.product_id,
         name=product_entry.name,

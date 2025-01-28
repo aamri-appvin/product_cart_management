@@ -5,51 +5,61 @@ from models import *
 from schema import *
 from models import Product
 import models
-from utils import Exception
+from utils.Exception import NOT_FOUND
 from auth import utils
 
 #  Cart Operations
-async def add_product_to_cart(
-    cart_id: int, product_id: int, quantity: int, db: AsyncSession
-):
+from fastapi import HTTPException
+
+async def add_product_to_cart(cart_id: int, product_id: int, quantity: int, db: AsyncSession):
     try:
-        product_query = await db.execute(
-            select(Product).filter(Product.product_id == product_id)
-        )
+        product_query = await db.execute(select(Product).filter(Product.product_id == product_id))
         product_entry = product_query.scalars().first()
-        check_deleted=await db.execute(select(Deleted_Products).filter(Deleted_Products.product_id==product_entry.product_id))
-        if not product_entry or check_deleted:
-            raise HTTPException(
-                status_code=Exception.NOT_FOUND.status_code, detail=f"Product with ID {product_id} not found."
-            )
+
+        if not product_entry:
+            raise HTTPException(status_code=NOT_FOUND.get("status_code"), detail=NOT_FOUND.get("detail"))
+
+        check_deleted = await db.execute(
+            select(Deleted_Products).filter(Deleted_Products.product_id == product_id)
+        )
+        deleted_entry = check_deleted.scalars().first()
+        
+        if deleted_entry:
+            raise HTTPException(status_code=NOT_FOUND.get("status_code"), detail=NOT_FOUND.get("detail"))
 
         if product_entry.quantity_in_stock < quantity:
             raise HTTPException(
                 status_code=400,
                 detail=f"Not enough stock for product ID {product_id}. Available: {product_entry.quantity_in_stock}",
             )
-        query = await db.execute(
-            select(CartItem).filter(
-                CartItem.cart_id == cart_id, CartItem.product_id == product_id
-            )
+
+        cart_query = await db.execute(
+            select(CartItem).filter(CartItem.cart_id == cart_id, CartItem.product_id == product_id)
         )
-        existing_cart_item = query.scalars().first()
+        existing_cart_item = cart_query.scalars().first()
 
         if existing_cart_item:
             existing_cart_item.qty += quantity
             db.add(existing_cart_item)
         else:
-            new_cart_item = CartItem(
-                cart_id=cart_id, product_id=product_id, qty=quantity
-            )
+            new_cart_item = CartItem(cart_id=cart_id, product_id=product_id, qty=quantity)
             db.add(new_cart_item)
-        product_entry.quantity_in_stock -= quantity
-        db.add(product_entry)  
-        await db.commit()
-        return existing_cart_item if existing_cart_item else new_cart_item
 
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        product_entry.quantity_in_stock -= quantity
+        db.add(product_entry)
+
+        await db.commit()
+
+        return Cart_Item(
+            cart_id=cart_id,
+            product_id=product_id,
+            qty=quantity,
+        )
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
 
 async def create_cart(db:AsyncSession,cart:Create_Cart):
     cart_entry = models.Cart(

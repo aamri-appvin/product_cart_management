@@ -54,7 +54,7 @@ async def update_product(
 ):
     updated=await products.routes.update_product(db=db,product_id=product_id,product=product)
     if updated is None:
-        raise HTTPException(status_code=Exception.NOT_FOUND.status_code, detail="PRODUCT NOT FOUND")
+        raise HTTPException(status_code=Exception.NOT_FOUND.get("status_code"), detail=Exception.NOT_FOUND.get("detail"))
     return updated
 @products_router.delete('/{product_id}',response_model=schema.Product)
 async def delete_product(product_id: int,db: AsyncSession = Depends(get_db)):

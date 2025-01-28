@@ -3,9 +3,10 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
 from models import Base  # Import your models
-
+from dotenv import dotenv_values
 # This is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
+credentials=dotenv_values(".env")
 config = context.config
 
 # Interpret the config file for Python logging.
@@ -20,6 +21,10 @@ target_metadata = Base.metadata  # Replace with your model's Base
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+# sqlalchemy.url = postgresql://%(USER)s:%(PASSWORD)s@localhost/%(DB_NAME)s
+url=f"postgresql://{credentials['USER']}:{credentials['PASSWORD']}@localhost/{credentials['DATABASE']}"
+# url = f"postgresql://{credentials['USER']}:{credentials['PASSWORD']}@{credentials['HOST']}:{credentials['PORT']}/{credentials['DATABASE']}"
+config.set_main_option('sqlalchemy.url', url)
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
