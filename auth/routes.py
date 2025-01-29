@@ -7,6 +7,7 @@ from models import Product
 import models
 from utils import Exception
 from auth import utils
+from utils.Response import generate_error_response,generate_success_response
 
 #Auth Operations
 async def user_signup(user: User_Model, db: AsyncSession):
@@ -20,7 +21,8 @@ async def user_signup(user: User_Model, db: AsyncSession):
     existing_user = result.scalars().first()
 
     if existing_user:
-        raise HTTPException(status_code=Exception.CONFLICT.status_code, detail="EMAIL ALREADY EXISTS")
+        return generate_error_response(Exception.CONFLICT.get("status_code"),"EMAIL ALREADY EXISTS",Exception.CONFLICT.get("detail"))
+        # raise HTTPException(status_code=Exception.CONFLICT.status_code, detail="EMAIL ALREADY EXISTS")
 
     new_item = Users(
         name=user.name,
@@ -30,11 +32,12 @@ async def user_signup(user: User_Model, db: AsyncSession):
     db.add(new_item)
     await db.commit()
     await db.refresh(new_item)
-    return {
+    data={
         "id": new_item.id,
         "name": new_item.name,
         "email": new_item.email
     }
+    return generate_success_response(status_code=200,message="Successful",data=data)
 
 async def user_login(user:User_Model,db:AsyncSession):
     existing_user = await db.execute(
@@ -45,7 +48,8 @@ async def user_login(user:User_Model,db:AsyncSession):
     existing_user=existing_user.scalars().first()
 
     if not existing_user or not await utils.verify_password(user.password,existing_user.password):
-        raise HTTPException(status_code=Exception.UNAUTHORIZED.status_code,detail=str("INVALID CREDENTIALS"))
+        return generate_error_response(Exception.UNAUTHORIZED.get("status_code"),"INVALID CREDENTIALS",Exception.UNAUTHORIZED.get("detail"))
+        # raise HTTPException(status_code=Exception.UNAUTHORIZED.status_code,detail=str("INVALID CREDENTIALS"))
     access_token=await utils.create_access_token(data={"email":existing_user.email})
     name_user = await db.execute(
         select(Users).filter(
@@ -54,5 +58,7 @@ async def user_login(user:User_Model,db:AsyncSession):
     )
     name_user=name_user.scalars().first()
     if not name_user:
-        raise HTTPException(status_code=Exception.UNAUTHORIZED.status_code,detail=str("INCORRECT NAME PROVIDED"))
-    return {"access_token":access_token,"token_type":"bearer"}
+        return generate_error_response(status_code=Exception.UNAUTHORIZED.get("status_code"),message="INCORRECT NAME PROVIDED",error=Exception.UNAUTHORIZED.get("detail"))
+        # raise HTTPException(status_code=Exception.UNAUTHORIZED.status_code,detail=str("INCORRECT NAME PROVIDED"))
+    data={"access_token":access_token,"token_type":"bearer"}
+    return generate_success_response(status_code=200,message="Successful",data=data)
