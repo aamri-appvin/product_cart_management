@@ -1,6 +1,7 @@
-from sqlalchemy import Integer, String, Float,Numeric
+from datetime import datetime
+from sqlalchemy import ForeignKey, Integer, String, Float,Numeric
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import Column, Integer, String,VARCHAR
+from sqlalchemy import Column, Integer, String,VARCHAR,DateTime
 class Base(DeclarativeBase):
     pass
 
@@ -13,13 +14,14 @@ class Cart(Base):
 
 
 class CartItem(Base):
-    __tablename__ = "cart_items"
+    __tablename__ = 'cart_items'
 
-    cart_item_id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    cart_id: Mapped[int] = mapped_column(Integer, nullable=False) 
-    product_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    qty: Mapped[int] = mapped_column(Integer, nullable=False)
-
+    cart_item_id = Column(Integer, primary_key=True, index=True)
+    cart_id = Column(Integer, ForeignKey('carts.cart_id'), nullable=False)
+    product_id = Column(Integer, ForeignKey('products.product_id'), nullable=False)
+    qty = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 class Product(Base):
     __tablename__ = "products"
@@ -29,6 +31,8 @@ class Product(Base):
     description: Mapped[str] = mapped_column(String(255))
     price: Mapped[float] = mapped_column(Numeric)
     quantity_in_stock: Mapped[int] = mapped_column(Integer)
+    created_at:Mapped[DateTime]=mapped_column(DateTime)
+    updated_at:Mapped[DateTime]=mapped_column(DateTime)
     
 #Table for testing alembic
 class Sample_Table(Base):
@@ -46,6 +50,8 @@ class Deleted_Products(Base):
     description: Mapped[str] = mapped_column(String(255))
     price: Mapped[float] = mapped_column(Numeric)
     quantity_in_stock: Mapped[int] = mapped_column(Integer)
+    created_at:Mapped[DateTime]=mapped_column(DateTime)
+    updated_at:Mapped[DateTime]=mapped_column(DateTime)
 
 class Users(Base):
     __tablename__="users"
@@ -54,7 +60,6 @@ class Users(Base):
     name:Mapped[str]=mapped_column(String,nullable=False)
     email:Mapped[str]=mapped_column(String,nullable=False)
     password:Mapped[VARCHAR]=mapped_column(VARCHAR(255))
-
 
 #Testing Purpose
 class Sample_Table2(Base):

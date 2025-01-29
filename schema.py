@@ -20,7 +20,16 @@ class Product(BaseModel):
 
     class Config:
         orm_mode = True
+class CartItemResponse(BaseModel):
+    cart_id: int
+    product_id: int
+    qty: int
+    created_at: str
+    updated_at: str
 
+    class Config:
+        orm_mode = True 
+        
 class Cart_Item(BaseModel):
     product_id: int
     cart_id: int

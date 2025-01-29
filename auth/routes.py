@@ -37,7 +37,7 @@ async def user_signup(user: User_Model, db: AsyncSession):
         "name": new_item.name,
         "email": new_item.email
     }
-    return generate_success_response(status_code=200,message="Successful",data=data)
+    return generate_success_response(status_code=200,message=f"{new_item.name} Signed Up Successfully",data=data)
 
 async def user_login(user:User_Model,db:AsyncSession):
     existing_user = await db.execute(
@@ -61,4 +61,4 @@ async def user_login(user:User_Model,db:AsyncSession):
         return generate_error_response(status_code=Exception.UNAUTHORIZED.get("status_code"),message="INCORRECT NAME PROVIDED",error=Exception.UNAUTHORIZED.get("detail"))
         # raise HTTPException(status_code=Exception.UNAUTHORIZED.status_code,detail=str("INCORRECT NAME PROVIDED"))
     data={"access_token":access_token,"token_type":"bearer"}
-    return generate_success_response(status_code=200,message="Successful",data=data)
+    return generate_success_response(status_code=200,message=f"{name_user.name} logged in Successfully",data=data)

@@ -1,6 +1,6 @@
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+from typing import List, Optional
 import auth.routes
 import carts.routes
 from database import engine, Base, get_db
@@ -38,15 +38,14 @@ async def create_product(
     return await products.routes.create_product(db=db,product=product)
 
 @products_router.get("/", response_model=List[schema.Product])
-async def get_all_products(db: AsyncSession = Depends(get_db)):
-    return await products.routes.get_all_products(db=db)
-
-@products_router.get("/{product_id}", response_model=schema.Product)
-async def get_product_by_id(product_id: int, db: AsyncSession = Depends(get_db)):
-    db_product=await products.routes.get_product(db=db,product_id=product_id)
-    if db_product is None:
-        raise HTTPException(status_code=Exception.NOT_FOUND.status_code, detail="PRODUCT NOT FOUND!")
-    return db_product
+async def get_product(product_id:Optional[int]=None,db:AsyncSession=Depends(get_db)):
+    if product_id==None:
+        return await products.routes.get_all_products(db=db)
+    else:
+        db_product=await products.routes.get_product(db=db,product_id=product_id)
+        if db_product is None:
+            raise HTTPException(status_code=Exception.NOT_FOUND.status_code, detail="PRODUCT NOT FOUND!")
+        return db_product
 
 @products_router.put("/{product_id}", response_model=schema.Product)
 async def update_product(
