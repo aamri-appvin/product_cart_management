@@ -117,7 +117,7 @@ async def get_cart_items(db: AsyncSession, cart_id: int):
         }
         for d in data
     ]
-    return generate_success_response(status_code=200,message="Successfully rendered all cart items",data=cart_items)
+    return generate_success_response(status_code=200,count=len(list(cart_items)),message="Successfully rendered all cart items",data=cart_items)
 
 
 async def remove_item_from_cart(db: AsyncSession, cart_item_id: int, cart_id: int):

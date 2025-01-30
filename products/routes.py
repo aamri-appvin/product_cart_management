@@ -10,6 +10,7 @@ from utils import Exception
 from auth import utils
 from utils.Response import generate_error_response,generate_success_response
 import datetime
+from datetime import datetime
 # Product Operations
 async def get_product(db: AsyncSession, product_id: int):
     query = await db.execute(select(Product).filter(Product.product_id == product_id))
@@ -51,8 +52,8 @@ async def get_all_products(db: AsyncSession):
 
 
 async def create_product(db: AsyncSession, product: Create_Product):
-    created_at=datetime.datetime.now()
-    updated_at=datetime.datetime.now()
+    created_at=datetime.now()
+    updated_at=datetime.now()
     product_entry = Product(
     name=product.name,
     description=product.description,
@@ -87,7 +88,7 @@ async def update_product(db: AsyncSession, product_id: int, product: Create_Prod
     existing_product.description = product.description
     existing_product.price = product.price
     existing_product.quantity_in_stock = product.quantity_in_stock
-    existing_product.updated_at = datetime.datetime.now()  
+    existing_product.updated_at = datetime.now()  
 
     new_product = {
         "product_id": existing_product.product_id,
@@ -105,7 +106,6 @@ async def update_product(db: AsyncSession, product_id: int, product: Create_Prod
         return generate_error_response(status_code=Exception.INTERNAL_SERVER_ERROR.get("status_code"),message="Failed to update product",error=Exception.NOT_FOUND.get("detail"))
     return generate_success_response(status_code=200, count=1, message="Product Updated Successfully", data=new_product)
 
-from datetime import datetime
 
 async def delete_product(db: AsyncSession, product_id: int):
     query = await db.execute(select(Product).filter(Product.product_id == product_id, Deleted_Products.product_id != product_id))
