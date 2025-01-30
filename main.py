@@ -1,19 +1,20 @@
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
+from utils.Response import generate_error_response
 import auth.routes
+from auth.routes import verify_otp
 import carts.routes
 from database import engine, Base, get_db
 import products.routes
 import schema
 import crud
 from models import Product, CartItem, Cart
-from utils import Exception
 import auth
 import products
 import carts
 app = FastAPI()
-
+from utils.Exception import CONFLICT,BAD_REQUEST, NOT_FOUND,UNAUTHORIZED
 
 #Auth router
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -28,6 +29,18 @@ async def user_signup(user:schema.User_Model,db:AsyncSession=Depends(get_db)):
 async def user_login(user:schema.User_Model,db:AsyncSession=Depends(get_db)):
     return await auth.routes.user_login(user,db)
 
+@app.post("/forget_password")
+async def forget_password(email:str,db:AsyncSession=Depends(get_db)):
+    return await auth.routes.forget_password(email,db)
+
+@app.post("/verify_otp")
+async def verify_user_otp(user_otp:int,updated_password:int , db:AsyncSession=Depends(get_db) ):
+    response=await verify_otp(user_otp)
+    if response.status_code==200:
+        return auth.routes.update_password(updated_password,db)
+    else:
+        return generate_error_response(status_code=UNAUTHORIZED.get("status_code"),message="INCORRECT OTP PROVIDED",error=UNAUTHORIZED.get("detail"))
+    
 # Products Router
 products_router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -53,7 +66,7 @@ async def update_product(
 ):
     updated=await products.routes.update_product(db=db,product_id=product_id,product=product)
     if updated is None:
-        raise HTTPException(status_code=Exception.NOT_FOUND.get("status_code"), detail=Exception.NOT_FOUND.get("detail"))
+        raise HTTPException(status_code=NOT_FOUND.get("status_code"), detail=NOT_FOUND.get("detail"))
     return updated
 @products_router.delete('/{product_id}',response_model=schema.Product)
 async def delete_product(product_id: int,db: AsyncSession = Depends(get_db)):
