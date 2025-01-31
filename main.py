@@ -34,10 +34,11 @@ async def forget_password(email:str,db:AsyncSession=Depends(get_db)):
     return await auth.routes.forget_password(email,db)
 
 @app.post("/verify_otp")
-async def verify_user_otp(user_otp:int,updated_password:int , db:AsyncSession=Depends(get_db) ):
+async def verify_user_otp(user_otp:int,updated_password:str , db:AsyncSession=Depends(get_db) ):
     response=await verify_otp(user_otp)
+    print("RESPONse",response)
     if response.status_code==200:
-        return auth.routes.update_password(updated_password,db)
+        return await auth.routes.update_password(updated_password,db)
     else:
         return generate_error_response(status_code=UNAUTHORIZED.get("status_code"),message="INCORRECT OTP PROVIDED",error=UNAUTHORIZED.get("detail"))
     

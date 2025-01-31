@@ -21,6 +21,8 @@ import os
 
 GEN_OTP=None
 EXP=None
+EMAIL_ID=None
+
 credentials=dotenv_values(".env")
 #Auth Operations
 async def user_signup(user: User_Model, db: AsyncSession):
@@ -121,27 +123,44 @@ async def forget_password(email:str,db:AsyncSession):
     exp=datetime.utcnow()+timedelta(minutes=10)
     send_email(email=email,db=db)
 
+    global GEN_OTP,EXP,EMAIL_ID
     GEN_OTP=otp
     EXP=exp
+    EMAIL_ID=email
+    print("GENERATED",GEN_OTP)
+    print("EXPIRY",EXP)
 
     return generate_success_response(status_code=200,message="OTP SENT SUCCESSFULLY")
 
 
-async def verify_otp(user_otp:int):
+async def verify_otp(user_otp: int):
+    global GEN_OTP, EXP
+    print("GENERATED OTP:", GEN_OTP)
+    print("EXPIRY TIME:", EXP)
 
-    if GEN_OTP==None or EXP==None or user_otp!=GEN_OTP:
-        await generate_error_response(status_code=Exception.CONFLICT.get("status_code"),message="INCORRECT OTP PROVIDED",error=Exception.CONFLICT.get("detail"))
+    if GEN_OTP is None or EXP is None or user_otp != GEN_OTP:
+        return generate_error_response(
+            status_code=Exception.CONFLICT.get("status_code"),
+            message="INCORRECT OTP PROVIDED",
+            error=Exception.CONFLICT.get("detail")
+        )
 
     if EXP <= datetime.utcnow():
-        return generate_error_response(status_code=Exception.BAD_REQUEST.get("status_code"), message="OTP EXPIRED",error=Exception.BAD_REQUEST.get("detail"))
-    return generate_success_response(status_code=200,message="VERIFIED SUCCESSFULLY")
+        return generate_error_response(
+            status_code=Exception.BAD_REQUEST.get("status_code"),
+            message="OTP EXPIRED",
+            error=Exception.BAD_REQUEST.get("detail")
+        )
+    return generate_success_response(status_code=200, message="VERIFIED SUCCESSFULLY")
 
-async def update_password(password:str,email:str,db:AsyncSession):
-    existing_user=await db.execute(select(Users).filter(email==Users.email))
-    user=existing_user.scalars().first()
-    user.password=await utils.get_password_hash(password)
 
+async def update_password(password: str, db: AsyncSession):
+    global EMAIL_ID
+    print("Your Email Id is ", EMAIL_ID)
+    result = await db.execute(select(Users).filter(Users.email == EMAIL_ID))
+    user = result.scalars().first()
+    if not user:
+        return generate_error_response(status_code=404, message="User not found")
+    user.password = await utils.get_password_hash(password)
     await db.commit()
-    generate_success_response(status_code=200,message="PASSWORD UPDATED SUCCESSFULLY")
-
-    
+    return generate_success_response(status_code=200, message="PASSWORD UPDATED SUCCESSFULLY")

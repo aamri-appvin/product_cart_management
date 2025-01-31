@@ -9,6 +9,7 @@ from utils.Response import generate_error_response,generate_success_response
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated="auto")
 
 async def get_password_hash(password:str):
+    print("New Password!!!! YAYYYYYY")
     return pwd_context.hash(password)
 
 async def create_access_token(data):
