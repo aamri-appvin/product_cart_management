@@ -11,7 +11,7 @@ from auth import utils
 from utils.Response import generate_error_response,generate_success_response
 import datetime
 from datetime import datetime
-# Product Operations
+
 async def get_product(db: AsyncSession, product_id: int):
     query = await db.execute(select(Product).filter(Product.product_id == product_id))
     product = query.scalars().first()
@@ -31,6 +31,7 @@ async def get_product(db: AsyncSession, product_id: int):
         "price": float(product.price) if isinstance(product.price,Decimal) else product.price,
         "quantity_in_stock": product.quantity_in_stock
     }
+    print("This is our product",new_product)
     return generate_success_response(status_code=200,count=1,message="Product Fethched Successfully",data=new_product)
 
 

@@ -68,3 +68,4 @@ class Sample_Table2(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(50), nullable=False)
 
+
