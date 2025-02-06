@@ -2,11 +2,11 @@ from dotenv import dotenv_values
 from fastapi import FastAPI, HTTPException, status, Depends
 from jose import JWTError, jwt
 from auth.config import settings
-from fastapi.security import OAuth2PasswordBearer 
+# from fastapi.security import OAuth2PasswordBearer 
 #TOKEN AUTHORIZATION
 from functools import wraps
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 cred=dotenv_values(".env")
 app = FastAPI()
@@ -26,8 +26,9 @@ def get_token_from_header(authorization: str = Header(...)):
 
 
 async def secure_endpoint(token: str = Depends(get_token_from_header)):
+    print("Your Token is ",token[7:])
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(token[7:], settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get("email")
         print(payload)
         if email is None:

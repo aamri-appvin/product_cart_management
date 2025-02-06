@@ -15,7 +15,7 @@ import auth
 import products
 import carts
 from utils.Exception import CONFLICT,BAD_REQUEST, NOT_FOUND,UNAUTHORIZED
-from utils.Get_User import oauth2_scheme, secure_endpoint
+from utils.Get_User import secure_endpoint
 
 
 app = FastAPI()
@@ -53,6 +53,8 @@ products_router = APIRouter(prefix="/products", tags=["Products"])
 async def create_product(
     product: schema.Create_Product, db: AsyncSession = Depends(get_db) , current_user:str=Depends(secure_endpoint)
 ):
+    print("Product Creation Initiated")
+    print("Current User",current_user)
     return await products.routes.create_product(db=db,product=product)
 
 
@@ -68,9 +70,6 @@ async def get_product(product_id: Optional[int] = None, db: AsyncSession = Depen
             raise HTTPException(status_code=404, detail="PRODUCT NOT FOUND!")
         return db_product
 
-
-
-
 @products_router.put("/{product_id}", response_model=schema.Product)
 async def update_product(
     product_id: int, product: schema.Create_Product, db: AsyncSession = Depends(get_db),current_user:str=Depends(secure_endpoint)
@@ -83,8 +82,6 @@ async def update_product(
 async def delete_product(product_id: int,db: AsyncSession = Depends(get_db) , current_user:str=Depends(secure_endpoint)):
     deleted=await products.routes.delete_product(db=db,product_id=product_id)
     return deleted
-
-
 
 
 
