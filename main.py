@@ -1,3 +1,4 @@
+import json
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, status , UploadFile
 from fastapi.responses import StreamingResponse
 from minio import S3Error
@@ -23,6 +24,9 @@ import os
 import io
 from clickhouse_driver import Client
 from utils import track_user_activity
+import version
+from version import update_version
+
 
 clickhouse_driver=Client(host='localhost',port='9000')
 app = FastAPI()
@@ -31,6 +35,18 @@ bucket_name="samplebucket"
 if not minio_client.bucket_exists(bucket_name):
     minio_client.make_bucket(bucket_name)
 
+
+
+#Version router
+version_router=APIRouter(prefix="/version",tags=["Version"])
+
+@app.get("/version_info")
+def get_version_info():
+    return version.get_version()
+
+@app.post("/update_version")
+def update_versionn(component:str,version:str):
+    return update_version(component,version)
 
 #Auth router
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
