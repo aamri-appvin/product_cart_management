@@ -6,19 +6,22 @@ from models import *
 from schema import *
 from models import Product
 import models
+from utils import track_user_activity
 from utils.Exception import NOT_FOUND
 from auth import utils
 from utils.Response import generate_success_response,generate_error_response
 from utils import Exception
 #  Cart Operations
 from fastapi import HTTPException
-
-
+from utils import global_vars
 from fastapi import HTTPException
 from sqlalchemy.future import select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import func
 
+def get_logged_in_user():
+    print(f"User logged in: {global_vars.USER_LOGGED_IN}")
+    return global_vars.USER_LOGGED_IN 
 
 async def add_product_to_cart(cart_id: int, product_id: int, quantity: int, db: AsyncSession):
     try:
@@ -78,6 +81,9 @@ async def add_product_to_cart(cart_id: int, product_id: int, quantity: int, db: 
             "product_id": product_id,
             "qty": quantity,
         }
+        new_user=User_Info(user_id=get_logged_in_user() , action="added product to cart" , product_id=product_id )
+        result=track_user_activity.log_user_activity(new_user)
+        print("Activity created")
         return generate_success_response(status_code=200, message="Successfully added to cart", data=data)
 
     except Exception as e:
@@ -100,6 +106,10 @@ async def create_cart(db:AsyncSession,cart:Create_Cart):
        "cart_id":cart_entry.cart_id,
        "owner_name":cart_entry.owner_name
     }
+    new_user=User_Info(user_id=get_logged_in_user() , action="created cart")
+    result=track_user_activity.log_user_activity(new_user)
+    print("Activity created")
+
     return generate_success_response(status_code=200,message="Successfully created the cart",data=new_cart)
 
 
@@ -117,6 +127,9 @@ async def get_cart_items(db: AsyncSession, cart_id: int):
         }
         for d in data
     ]
+    new_user=User_Info(user_id=get_logged_in_user() , action=f"get cart items with cart id {cart_id}" )
+    result=track_user_activity.log_user_activity(new_user)
+    print("Activity created")
     return generate_success_response(status_code=200,count=len(list(cart_items)),message="Successfully rendered all cart items",data=cart_items)
 
 
@@ -152,6 +165,10 @@ async def remove_item_from_cart(db: AsyncSession, cart_item_id: int, cart_id: in
     
     await db.delete(cart_item_entry)
     await db.commit()
+
+    new_user=User_Info(user_id=get_logged_in_user() , action=f"removed item with id {cart_item_entry.cart_item_id} from cart with id {cart_item_entry.cart_id}")
+    result=track_user_activity.log_user_activity(new_user)
+    print("Activity created")
 
     return generate_success_response(
         status_code=200, message="Successfully removed item", data=cart_item_data
@@ -205,6 +222,10 @@ async def update_cart_item(db: AsyncSession, cart_item_id: int, updated_item: Ca
         "created_at": cart_item_entry.created_at.isoformat(),
         "updated_at": cart_item_entry.updated_at.isoformat()
     }
+
+    new_user=User_Info(user_id=get_logged_in_user() , action=f"updated cart item with id {cart_item_entry.cart_item_id}")
+    result=track_user_activity.log_user_activity(new_user)
+    print("Activity created")
 
     return generate_success_response(
         status_code=200, count=1, message="Cart Item Updated Successfully", data=cart_entry

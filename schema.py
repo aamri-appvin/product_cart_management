@@ -61,3 +61,10 @@ class User_Model(BaseModel):
     password:str
     class Config:
         orm_mode=True
+
+class User_Info(BaseModel):
+    user_id:int
+    action:str
+    product_id:Optional[int]=None
+    class Config:
+        orm_mode:True

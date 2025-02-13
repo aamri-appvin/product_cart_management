@@ -1,4 +1,6 @@
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, status
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, status , UploadFile
+from fastapi.responses import StreamingResponse
+from minio import S3Error
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 # from utils.Get_User import authenticate_user
@@ -16,9 +18,19 @@ import products
 import carts
 from utils.Exception import CONFLICT,BAD_REQUEST, NOT_FOUND,UNAUTHORIZED
 from utils.Get_User import secure_endpoint
+from minio_client import minio_client
+import os 
+import io
+from clickhouse_driver import Client
+from utils import track_user_activity
 
-
+clickhouse_driver=Client(host='localhost',port='9000')
 app = FastAPI()
+bucket_name="samplebucket"
+
+if not minio_client.bucket_exists(bucket_name):
+    minio_client.make_bucket(bucket_name)
+
 
 #Auth router
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -130,10 +142,67 @@ async def update_cart_item(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+
+
+@app.post("/upload")
+async def file_upload(file: UploadFile):
+    try:
+        file_content=await file.read()
+
+        file_size=len(file_content)   
+
+        file_stream=io.BytesIO(file_content)
+
+        minio_client.put_object(
+        bucket_name=bucket_name,
+        object_name=file.filename,
+        data=file_stream,
+        length=file_size,
+        content_type=file.content_type
+        )
+        # os.remove(file_path)
+        return {"message":f"File {file.filename} has successfully uploaded."}
+    except S3Error as e:
+        raise HTTPException(status_code=500,detail=str(e))
+    
+@app.get("/download/{filename}")
+def download_file(filename:str):
+    try:
+        file_data=minio_client.get_object(bucket_name,filename)
+        return StreamingResponse(file_data,media_type="application/octet-stream")
+    except S3Error as e:
+        raise HTTPException(status_code=500,detail=str(e))
+
+@app.get("/get_objects/{bucket_name}")
+def get_objects(bucket_name:str):
+    data=minio_client.list_objects(bucket_name)
+    print(data)
+    return {"data":data}
+
+@app.delete("/delete_file/{bucket_name}/{filename}")
+def delete_objects(bucket_name:str,filename:str):
+    obj=minio_client.get_object(bucket_name,filename)
+    print(obj,"is the deleted object")
+    minio_client._delete_objects(bucket_name,filename)
+    return obj
+
+
+#User Activity tracking
+user_router=APIRouter(prefix='/user',tags=['User'])
+
+@user_router.post('/track_user_action')
+def track(user:schema.User_Info):
+    result=track_user_activity.log_user_activity(user)
+    print("Activity created")
+    return result
+
+
+
+
 app.include_router(auth_router)
 app.include_router(products_router)
 app.include_router(cart_router)
-
+app.include_router(user_router)
 
 if __name__ == "__main__":
     import uvicorn

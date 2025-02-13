@@ -6,11 +6,20 @@ from models import *
 from schema import *
 from models import Product
 import models
+# import track_user_activity
+from utils import track_user_activity
 from utils import Exception
 from auth import utils
 from utils.Response import generate_error_response,generate_success_response
 import datetime
 from datetime import datetime
+# from auth.routes import USER_LOGGED_IN
+from utils import global_vars
+
+
+def get_logged_in_user():
+    print(f"User logged in: {global_vars.USER_LOGGED_IN}")
+    return global_vars.USER_LOGGED_IN
 
 async def get_product(db: AsyncSession, product_id: int):
     query = await db.execute(select(Product).filter(Product.product_id == product_id))
@@ -32,6 +41,10 @@ async def get_product(db: AsyncSession, product_id: int):
         "quantity_in_stock": product.quantity_in_stock
     }
     print("This is our product",new_product)
+    #user activity successfully logged
+    new_user=User_Info(user_id=get_logged_in_user() , action="viewed_product" , product_id=product_id )
+    result=track_user_activity.log_user_activity(new_user)
+    print("Activity created")
     return generate_success_response(status_code=200,count=1,message="Product Fethched Successfully",data=new_product)
 
 
@@ -49,6 +62,10 @@ async def get_all_products(db: AsyncSession):
         "quantity_in_stock": p.quantity_in_stock
     }
     for p in products]
+    print(get_logged_in_user() ,"is your user")
+    new_user=User_Info(user_id=global_vars.USER_LOGGED_IN , action="viewed_products" )
+    result=track_user_activity.log_user_activity(new_user)
+    print("Activity created")
     return generate_success_response(status_code=200, count=len(list(new_product)),message="Successfully Fetched All Products", data=new_product)
 
 
@@ -76,6 +93,11 @@ async def create_product(db: AsyncSession, product: Create_Product):
         "updated_at":updated_at.isoformat()
     }
     print(new_product,"NEW PRODUCT")
+
+    new_user=User_Info(user_id=get_logged_in_user() , action="created_product" , product_id=product_entry.product_id )
+    result=track_user_activity.log_user_activity(new_user)
+    print("Activity created")
+
     return generate_success_response(status_code=200,message="Product Created Successfully",data=new_product)
 
 async def update_product(db: AsyncSession, product_id: int, product: Create_Product):
@@ -105,6 +127,11 @@ async def update_product(db: AsyncSession, product_id: int, product: Create_Prod
     except Exception as e:
         await db.rollback()
         return generate_error_response(status_code=Exception.INTERNAL_SERVER_ERROR.get("status_code"),message="Failed to update product",error=Exception.NOT_FOUND.get("detail"))
+
+    new_user=User_Info(user_id=get_logged_in_user() , action="updated_product" , product_id=existing_product.product_id )
+    result=track_user_activity.log_user_activity(new_user)
+    print("Activity created")
+
     return generate_success_response(status_code=200, count=1, message="Product Updated Successfully", data=new_product)
 
 
@@ -135,5 +162,10 @@ async def delete_product(db: AsyncSession, product_id: int):
     }
     await db.commit()
     await db.refresh(deleted_product)
+
+    new_user=User_Info(user_id=get_logged_in_user() , action="deleted_product" , product_id=new_product.product_id )
+    result=track_user_activity.log_user_activity(new_user)
+    print("Activity created")
+
     return generate_success_response(status_code=200, count=1, message="Product Deleted Successfully", data=new_product)
 

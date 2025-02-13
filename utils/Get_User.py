@@ -2,11 +2,8 @@ from dotenv import dotenv_values
 from fastapi import FastAPI, HTTPException, status, Depends
 from jose import JWTError, jwt
 from auth.config import settings
-# from fastapi.security import OAuth2PasswordBearer 
-#TOKEN AUTHORIZATION
 from functools import wraps
 
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 cred=dotenv_values(".env")
 app = FastAPI()

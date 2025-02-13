@@ -7,7 +7,8 @@ from models import *
 from schema import *
 from models import Product
 import models
-from utils import Exception
+# import track_user_activity
+from utils import Exception,track_user_activity,global_vars
 from auth import utils
 from utils.Response import generate_error_response,generate_success_response
 import smtplib
@@ -17,6 +18,7 @@ from random import randint
 from mailjet_rest import Client
 from random import randint
 import os
+
 
 
 GEN_OTP=None
@@ -52,6 +54,10 @@ async def user_signup(user: User_Model, db: AsyncSession):
         "name": new_item.name,
         "email": new_item.email
     }
+
+    new_user=User_Info(user_id=new_item.id,action="user_signup" )
+    result=track_user_activity.log_user_activity(new_user)
+    print("Activity created")
     return generate_success_response(status_code=200,message=f"{new_item.name} Signed Up Successfully",data=data)
 
 async def user_login(user:User_Model,db:AsyncSession):
@@ -76,6 +82,11 @@ async def user_login(user:User_Model,db:AsyncSession):
         return generate_error_response(status_code=Exception.UNAUTHORIZED.get("status_code"),message="INCORRECT NAME PROVIDED",error=Exception.UNAUTHORIZED.get("detail"))
         # raise HTTPException(status_code=Exception.UNAUTHORIZED.status_code,detail=str("INCORRECT NAME PROVIDED"))
     data={"access_token":access_token,"token_type":"bearer"}
+    new_user=User_Info(user_id=name_user.id,action="user_login" )
+    result=track_user_activity.log_user_activity(new_user)
+    print("Activity created",result)
+    global_vars.USER_LOGGED_IN=name_user.id
+    print("USER_LOGGED_IN variable set to",global_vars.USER_LOGGED_IN)
     return generate_success_response(status_code=200,message=f"{name_user.name} logged in Successfully",data=data)
 
 def send_email(email: str,db:AsyncSession):
@@ -163,4 +174,7 @@ async def update_password(password: str, db: AsyncSession):
         return generate_error_response(status_code=404, message="User not found")
     user.password = await utils.get_password_hash(password)
     await db.commit()
+    new_user=User_Info(user_id=user.id,action="user_forgot_password_and_updated_successfully" )
+    result=track_user_activity.log_user_activity(new_user)
+    print("Activity created")
     return generate_success_response(status_code=200, message="PASSWORD UPDATED SUCCESSFULLY")
