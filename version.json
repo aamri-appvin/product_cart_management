@@ -1,7 +1,7 @@
 {
     "fast_api": "0.1.0",
     "db_version": "0.1.0",
-    "minio_version": "0.1.0",
+    "minio_version": "0.1.2",
     "grafana_version": "0.1.0",
     "release_date": "2025-02-13",
     "description": "update the version of the components in your application"
