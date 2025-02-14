@@ -18,8 +18,23 @@ def save_version(version_data):
         json.dump(version_data,file,indent=4)
     
 
+def increement_version(current_version:str,part:str):
+    major,minor,patch=map(int,current_version.split("."))
+    if part=="major":
+        major=major+1
+        minor,path=0,0
+    elif part=="minor":
+        minor=minor+1
+        patch=0
+    elif part=="patch":
+        patch=patch+1
+    else:
+        raise ValueError("Invalid part provided")
+    
+    return f"{major}.{minor}.{patch}"
 
-def update_version(component,version):
+
+def update_version(component,part):
 
     if not os.path.exists(VERSION_FILE):
         raise ValueError("Version File Does Not Exist")
@@ -39,15 +54,23 @@ def update_version(component,version):
     if not current_version.count(".")==2:
         raise ValueError("Invalid version!")
     
-    version_data[component]=version
+    version_data[component]=increement_version(str(current_version),part)
     version_data["release_date"]=datetime.today().strftime("%Y-%m-%d")
-    version_data["description"]=f"Version is updated for {component} from v{current_version} to v{version}"
-    commit_msg=f"Version is updated for {component} from v{current_version} to v{version}"
-    git_tag=f"{component}-v{version}"
+    version_data["description"]=f"Version is updated for {component} from v{current_version} to v{version_data[component]}"
+    commit_msg=f"Version is updated for {component} from v{current_version} to v{version_data[component]}"
+    git_tag=f"{component}-v{version_data[component]}"
     save_version(version_data)
     try:
         subprocess.run(["git","add",VERSION_FILE],check=True)
         subprocess.run(["git","commit","-m",commit_msg],check=True)
+
+        existing_tags=subprocess.run(["git","tag"],capture_output=True,text=True)
+        print("Existing tags are",existing_tags.stdout)
+        
+        if git_tag in existing_tags.stdout.split():
+            subprocess.run(["git","tag","-d",git_tag],check=True)
+            subprocess.run(["git","push","origin","--delete",git_tag],check=True)
+
         subprocess.run(["git","tag",git_tag],check=True)
         subprocess.run(["git","push","origin","master"],check=True)
         subprocess.run(["git","push","origin",git_tag],check=True)
@@ -59,6 +82,6 @@ def update_version(component,version):
 if __name__=="__main__":
     parser=argparse.ArgumentParser(description="To update the version of a specific component")
     parser.add_argument("component", help="Component to update")
-    parser.add_argument("version", help="New version number")
+    parser.add_argument("part",choices=["major","minor","patch"], help="New part")
     args=parser.parse_args()
-    update_version(args.component,args.version)
+    update_version(args.component,args.part)
