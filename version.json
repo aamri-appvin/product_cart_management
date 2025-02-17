@@ -1,8 +1,8 @@
 {
-    "fast_api": "0.1.0",
+    "fast_api": "0.1.1",
     "db_version": "0.1.0",
     "minio_version": "0.1.0",
     "grafana_version": "0.1.1",
-    "release_date": "2025-02-14",
-    "description": "Version is updated for grafana_version from v0.1.0 to v0.1.1"
+    "release_date": "2025-02-17",
+    "description": "Version is updated for fast_api from v0.1.0 to v0.1.1"
 }
