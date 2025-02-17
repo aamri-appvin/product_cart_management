@@ -22,7 +22,7 @@ def increement_version(current_version:str,part:str):
     major,minor,patch=map(int,current_version.split("."))
     if part=="major":
         major=major+1
-        minor,path=0,0
+        minor,patch=0,0
     elif part=="minor":
         minor=minor+1
         patch=0
